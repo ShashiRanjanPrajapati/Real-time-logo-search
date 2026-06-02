@@ -55,14 +55,14 @@ export const HeroSection = memo(function HeroSection({
       </section>
 
       {/* Marquee */}
-      <section
+      {/* <section
         className="marquee-section mt-10!"
         aria-label="Sample brand logos"
       >
         <MarqueeRow items={MARQUEE_ROW1} />
         <MarqueeRow items={MARQUEE_ROW2} reverse />
         <MarqueeRow items={MARQUEE_ROW3} />
-      </section>
+      </section> */}
     </>
   );
 });
