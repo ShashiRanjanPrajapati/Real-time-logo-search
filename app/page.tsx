@@ -1,65 +1,222 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Navbar } from "@/components/Organisms/Navbar";
+import { HeroSection } from "@/components/Organisms/HeroSection";
+import { ResultsSection } from "@/components/Organisms/ResultsSection";
+import { Toast } from "@/components/Atom/Toast";
+import type { LogoResult, SearchStrategy, SearchStatus } from "@/types/logo";
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [strategy, setStrategy] = useState<SearchStrategy>("suggest");
+  const [results, setResults] = useState<LogoResult[]>([]);
+  const [status, setStatus] = useState<SearchStatus>("idle");
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastVisible, setToastVisible] = useState(false);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cacheRef = useRef<Map<string, { results: LogoResult[]; status: SearchStatus }>>(new Map());
+
+  // Keep a ref to the current strategy to avoid re-creating handlers when strategy changes
+  const strategyRef = useRef<SearchStrategy>(strategy);
+  useEffect(() => {
+    strategyRef.current = strategy;
+  }, [strategy]);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastMsg(msg);
+    setToastVisible(true);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastVisible(false);
+      toastTimeoutRef.current = null;
+    }, 2500);
+  }, []);
+
+  const search = useCallback(
+    async (q: string, strat: SearchStrategy, immediate = false) => {
+      // Clear any pending debounced search timer
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+
+      const trimmed = q.trim();
+      if (!trimmed) {
+        // Abort any in-flight request if query is cleared
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+        setResults([]);
+        setStatus("idle");
+        return;
+      }
+
+      // Check client-side cache first
+      const cacheKey = `${trimmed.toLowerCase()}_${strat}`;
+      const cached = cacheRef.current.get(cacheKey);
+      if (cached) {
+        // Abort any in-flight request as cache hit takes precedence
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+        setResults(cached.results);
+        setStatus(cached.status);
+        return;
+      }
+
+      const executeFetch = async () => {
+        // Abort previous request before firing new fetch
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        setStatus("loading");
+        try {
+          const res = await fetch(
+            `/api/logosearch?q=${encodeURIComponent(trimmed)}&strategy=${strat}`,
+            { signal: controller.signal },
+          );
+          if (!res.ok) {
+            setStatus("error");
+            return;
+          }
+          const data: LogoResult[] = await res.json();
+          const finalStatus: SearchStatus =
+            !Array.isArray(data) || data.length === 0 ? "empty" : "success";
+          const finalResults = Array.isArray(data) ? data : [];
+
+          // Cache results
+          cacheRef.current.set(cacheKey, { results: finalResults, status: finalStatus });
+
+          setResults(finalResults);
+          setStatus(finalStatus);
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // Ignored, request was aborted intentionally
+          } else {
+            setStatus("error");
+          }
+        } finally {
+          if (abortControllerRef.current === controller) {
+            abortControllerRef.current = null;
+          }
+        }
+      };
+
+      if (immediate) {
+        await executeFetch();
+      } else {
+        searchTimeoutRef.current = setTimeout(executeFetch, 350);
+      }
+    },
+    [],
+  );
+
+  const handleQueryChange = useCallback(
+    (newQuery: string) => {
+      setQuery(newQuery);
+      search(newQuery, strategyRef.current, false);
+    },
+    [search],
+  );
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      search(query, strategyRef.current, true);
+    },
+    [query, search],
+  );
+
+  const handleQuickSearch = useCallback(
+    (q: string) => {
+      setQuery(q);
+      search(q, strategyRef.current, true);
+    },
+    [search],
+  );
+
+  const handleStrategyChange = useCallback(
+    (s: SearchStrategy) => {
+      setStrategy(s);
+      if (query.trim()) {
+        search(query, s, true);
+      }
+    },
+    [query, search],
+  );
+
+  const handleClear = useCallback(() => {
+    setQuery("");
+    search("", strategyRef.current, true);
+  }, [search]);
+
+  const handleSearchFocus = useCallback(() => {
+    const input = document.getElementById("logo-search-input") as HTMLInputElement;
+    input?.focus();
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const isResultsView =
+    status === "loading" || status === "success" || status === "empty" || status === "error";
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <>
+      <Navbar
+        query={query}
+        strategy={strategy}
+        status={status}
+        onQueryChange={handleQueryChange}
+        onSubmit={handleSubmit}
+        onClear={handleClear}
+        onStrategyChange={handleStrategyChange}
+        onQuickSearch={handleQuickSearch}
+      />
+
+      {!isResultsView && (
+        <HeroSection
+          onSearchFocus={handleSearchFocus}
+          onQuickSearch={handleQuickSearch}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      )}
+
+      {isResultsView && (
+        <ResultsSection
+          status={status}
+          query={query}
+          results={results}
+          strategy={strategy}
+          onStrategyChange={handleStrategyChange}
+          onQuickSearch={handleQuickSearch}
+          onToast={showToast}
+        />
+      )}
+
+      <Toast message={toastMsg} visible={toastVisible} />
+    </>
   );
 }
