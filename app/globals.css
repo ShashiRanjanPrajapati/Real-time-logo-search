@@ -534,6 +534,13 @@ body {
   font-weight: 500;
 }
 
+/* Controls row – strategy + view toggles */
+.results-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .strategy-toggle {
   display: flex;
   background: #1e1e1e;
@@ -559,6 +566,107 @@ body {
 .strategy-option.active {
   background: #f5c518;
   color: #111;
+}
+
+/* View mode toggle (grid / list icons) */
+.view-toggle {
+  display: flex;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.view-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.view-btn:hover {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.view-btn.active {
+  background: rgba(245, 197, 24, 0.15);
+  color: #f5c518;
+}
+
+/* ── List view layout ───────────────────────────────────────── */
+.logo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.logo-card-list {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #1c1c1c;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 12px 16px;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    border-color 0.18s,
+    transform 0.18s;
+  animation: card-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.logo-card-list:hover {
+  background: #222;
+  border-color: rgba(245, 197, 24, 0.25);
+  transform: translateX(3px);
+}
+
+/* smaller logo wrapper for list mode */
+.logo-img-wrapper--sm {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.logo-fallback--sm {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.logo-card-list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.logo-card-name--list {
+  text-align: left !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Actions always visible in list mode */
+.logo-card-actions--list {
+  opacity: 1 !important;
+  transform: none !important;
+  flex-shrink: 0;
+  width: auto !important;
 }
 
 /* Logo card */
@@ -653,7 +761,7 @@ body {
 .logo-card-actions {
   display: flex;
   gap: 6px;
-  width: 100%;
+  min-width: 200px;
   opacity: 0;
   transform: translateY(4px);
   transition:

@@ -9,10 +9,12 @@ export const LogoCard = memo(function LogoCard({
   result,
   index,
   onToast,
+  viewMode = "grid",
 }: {
   result: LogoResult;
   index: number;
   onToast: (msg: string) => void;
+  viewMode?: "grid" | "list";
 }) {
   const [imgError, setImgError] = useState(false);
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle");
@@ -61,6 +63,66 @@ export const LogoCard = memo(function LogoCard({
     e.stopPropagation();
     window.open(`https://${result.domain}`, "_blank", "noopener,noreferrer");
   };
+
+  if (viewMode === "list") {
+    return (
+      <a
+        href={`https://${result.domain}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="logo-card-list"
+        style={{ animationDelay: `${Math.min(index * 30, 400)}ms` }}
+        aria-label={`${result.name} — ${result.domain}`}
+      >
+        {/* Logo */}
+        <div className="logo-img-wrapper logo-img-wrapper--sm">
+          {!imgError ? (
+            <Image
+              src={logoUrl}
+              alt={`${result.name} logo`}
+              className="logo-img"
+              width={36}
+              height={36}
+              onError={() => setImgError(true)}
+              unoptimized
+            />
+          ) : (
+            <div className="logo-fallback logo-fallback--sm">{result.name?.[0] ?? "?"}</div>
+          )}
+        </div>
+
+        {/* Name + domain */}
+        <div className="logo-card-list-info">
+          <p className="logo-card-name logo-card-name--list">{result.name}</p>
+          <p className="logo-card-domain">{result.domain}</p>
+        </div>
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Actions – always visible in list mode */}
+        <div className="logo-card-actions logo-card-actions--list">
+          <button
+            className={`action-btn ${downloadState === "success" ? "copied" : ""}`}
+            onClick={handleDownload}
+            disabled={downloadState === "downloading"}
+            id={`download-btn-list-${result.domain.replace(/\./g, "-")}`}
+          >
+            {downloadState === "downloading" ? (
+              "⏳"
+            ) : downloadState === "success" ? (
+              "✓ Downloaded"
+            ) : (
+              <>↓ Download</>
+            )}
+          </button>
+          <button className="action-btn" onClick={handleVisit}>
+            ↗ Visit
+          </button>
+        </div>
+      </a>
+    );
+  }
 
   return (
     <a
