@@ -14,6 +14,7 @@ interface NavbarProps {
   onClear: () => void;
   onStrategyChange: (s: SearchStrategy) => void;
   onQuickSearch: (q: string) => void;
+  isResultsView: boolean;
 }
 
 export const Navbar = memo(function Navbar({
@@ -25,9 +26,10 @@ export const Navbar = memo(function Navbar({
   onClear,
   onStrategyChange,
   onQuickSearch,
+  isResultsView,
 }: NavbarProps) {
   return (
-    <nav className="navbar">
+    <nav className="navbar flex w-full justify-between">
       {/* Brand */}
       <Link
         href="/"
@@ -40,50 +42,54 @@ export const Navbar = memo(function Navbar({
       </Link>
 
       {/* Search */}
-      <form onSubmit={onSubmit} className="nav-search-form" role="search">
-        <div className="nav-search-wrapper">
-          <SearchIcon className="nav-search-icon" size={15} />
-          <input
-            id="logo-search-input"
-            type="search"
-            className="nav-search-input"
-            placeholder="Search brand logos, companies…"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            autoComplete="off"
-            aria-label="Search for a brand logo"
-          />
+      {isResultsView && (
+        <form onSubmit={onSubmit} className="nav-search-form" role="search">
+          <div className="nav-search-wrapper">
+            <SearchIcon className="nav-search-icon" size={15} />
+            <input
+              id="logo-search-input"
+              type="search"
+              className="nav-search-input"
+              placeholder="Search brand logos, companies…"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              autoComplete="off"
+              aria-label="Search for a brand logo"
+            />
 
-          <button
-            type="submit"
-            className="nav-search-btn"
-            disabled={status === "loading" || !query.trim()}
-            id="search-submit-btn"
-            aria-label="Search"
-          >
-            <SearchIcon size={15} />
-          </button>
-        </div>
-      </form>
+            <button
+              type="submit"
+              className="nav-search-btn"
+              disabled={status === "loading" || !query.trim()}
+              id="search-submit-btn"
+              aria-label="Search"
+            >
+              <SearchIcon size={15} />
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Tabs */}
-      <div className="nav-tabs" role="tablist">
-        {(["Suggest", "Match"] as const).map((tab) => {
-          const val = tab.toLowerCase() as SearchStrategy;
-          return (
-            <button
-              key={tab}
-              className={`nav-tab ${strategy === val ? "active" : ""}`}
-              role="tab"
-              aria-selected={strategy === val}
-              id={`tab-${val}`}
-              onClick={() => onStrategyChange(val)}
-            >
-              {tab}
-            </button>
-          );
-        })}
-      </div>
+      {isResultsView && (
+        <div className="nav-tabs" role="tablist">
+          {(["Suggest", "Match"] as const).map((tab) => {
+            const val = tab.toLowerCase() as SearchStrategy;
+            return (
+              <button
+                key={tab}
+                className={`nav-tab ${strategy === val ? "active" : ""}`}
+                role="tab"
+                aria-selected={strategy === val}
+                id={`tab-${val}`}
+                onClick={() => onStrategyChange(val)}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Right */}
       <div className="nav-right">

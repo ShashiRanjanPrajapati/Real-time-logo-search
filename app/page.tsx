@@ -161,11 +161,6 @@ export default function Home() {
     search("", strategyRef.current, true);
   }, [search]);
 
-  const handleSearchFocus = useCallback(() => {
-    const input = document.getElementById("logo-search-input") as HTMLInputElement;
-    input?.focus();
-  }, []);
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -195,11 +190,16 @@ export default function Home() {
         onClear={handleClear}
         onStrategyChange={handleStrategyChange}
         onQuickSearch={handleQuickSearch}
+        isResultsView={isResultsView}
       />
 
       {!isResultsView && (
         <HeroSection
-          onSearchFocus={handleSearchFocus}
+          query={query}
+          status={status}
+          onQueryChange={handleQueryChange}
+          onSubmit={handleSubmit}
+          onClear={handleClear}
           onQuickSearch={handleQuickSearch}
         />
       )}

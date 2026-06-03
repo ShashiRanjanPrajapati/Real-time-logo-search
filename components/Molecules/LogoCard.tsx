@@ -15,30 +15,46 @@ export const LogoCard = memo(function LogoCard({
   onToast: (msg: string) => void;
 }) {
   const [imgError, setImgError] = useState(false);
-  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "success">("idle");
 
   // size=64 is perfect for our 46px layout, reducing payload size by 4x
   const logoUrl = `https://img.logo.dev/${result.domain}?token=${PUBLISHABLE_KEY}&size=64&format=png`;
 
-  const handleCopyUrl = async (e: React.MouseEvent) => {
+  const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(logoUrl);
-      setCopyState("copied");
-      onToast("Logo URL copied!");
+      setDownloadState("downloading");
+      onToast("Downloading logo...");
+
+      const res = await fetch(`/api/logodownload?domain=${result.domain}&name=${encodeURIComponent(result.name)}`);
+      if (!res.ok) throw new Error("Download failed");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${result.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-logo.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      setDownloadState("success");
+      onToast("Logo downloaded!");
     } catch {
-      onToast("Failed to copy");
+      onToast("Failed to download");
+      setDownloadState("idle");
     }
   };
 
-  // Prevent memory leaks by cleaning up copy state timeout on unmount
+  // Prevent memory leaks by cleaning up download state timeout on unmount
   useEffect(() => {
-    if (copyState === "copied") {
-      const timer = setTimeout(() => setCopyState("idle"), 2000);
+    if (downloadState === "success") {
+      const timer = setTimeout(() => setDownloadState("idle"), 2000);
       return () => clearTimeout(timer);
     }
-  }, [copyState]);
+  }, [downloadState]);
 
   const handleVisit = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -78,11 +94,18 @@ export const LogoCard = memo(function LogoCard({
 
       <div className="logo-card-actions">
         <button
-          className={`action-btn ${copyState === "copied" ? "copied" : ""}`}
-          onClick={handleCopyUrl}
-          id={`copy-btn-${result.domain.replace(/\./g, "-")}`}
+          className={`action-btn ${downloadState === "success" ? "copied" : ""}`}
+          onClick={handleDownload}
+          disabled={downloadState === "downloading"}
+          id={`download-btn-${result.domain.replace(/\./g, "-")}`}
         >
-          {copyState === "copied" ? "✓ Copied" : "⧉ Copy"}
+          {downloadState === "downloading" ? (
+            "⏳ Loading…"
+          ) : downloadState === "success" ? (
+            "✓ Downloaded"
+          ) : (
+            <>↓ Download</>
+          )}
         </button>
         <button className="action-btn" onClick={handleVisit}>
           ↗ Visit

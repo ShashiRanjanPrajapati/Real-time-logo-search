@@ -28,11 +28,14 @@ export const ResultsSection = memo(function ResultsSection({
       {/* Header row */}
       <div className="results-header">
         <h2 className="results-title">
-          {status === "loading"
-            ? "Searching…"
-            : status === "success"
-            ? <>Results for <span>&ldquo;{query}&rdquo;</span> — {results.length} found</>
-            : null}
+          {status === "loading" ? (
+            "Searching…"
+          ) : status === "success" ? (
+            <>
+              Results for <span>&ldquo;{query}&rdquo;</span> — {results.length}{" "}
+              found
+            </>
+          ) : null}
         </h2>
 
         {/* Strategy toggle */}
@@ -54,7 +57,11 @@ export const ResultsSection = memo(function ResultsSection({
       {status === "loading" && <SkeletonGrid count={12} />}
 
       {status === "success" && (
-        <div className="logo-grid" role="list" aria-label="Logo results">
+        <div
+          className="grid grid-cols-5 gap-4"
+          role="list"
+          aria-label="Logo results"
+        >
           {results.map((r, i) => (
             <LogoCard key={r.domain} result={r} index={i} onToast={onToast} />
           ))}
